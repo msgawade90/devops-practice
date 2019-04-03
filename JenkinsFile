@@ -1,0 +1,29 @@
+node{
+   stage('SCM Checkout'){
+        git url: 'https://github.com/msgawade90/devops-practice'   }
+   stage('Mvn Package'){
+     def mvnHome = tool name: 'maven-3', type: 'maven'
+     def mvnCMD = "${mvnHome}/bin/mvn"
+     sh "${mvnCMD} clean package"
+   }
+   stage('Build Docker Image'){
+     //sh sudo su
+     sh 'docker build -t msgawade90/myapp:2.0.0 .'
+   }
+   
+   stage('Push Docker Image'){
+     withCredentials([string(credentialsId: 'docker-pwd', variable: 'dockerHubPwd')]) {
+        sh "docker login -u msgawade90 -p ${dockerHubPwd}"
+     }
+     sh 'docker push msgawade90/myapp:2.0.0'
+   }
+   
+   stage('Run Container on Dev Server'){
+     def dockerRun = 'sudo docker run -p 8190:8080 -d --name my-app-1.10Apr msgawade90/myapp:2.0.0'
+     sshagent(['ubuntu'])  {
+       sh "ssh -o StrictHostKeyChecking=no ubuntu@ip-172-31-37-250 ${dockerRun}"
+     }
+         //sh 'docker run -p 9098:8080 -d --name=my-app-31March msgawade90/myapp:2.0.0'
+
+   }
+}
